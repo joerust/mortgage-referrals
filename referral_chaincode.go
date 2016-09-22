@@ -37,15 +37,17 @@ func (t *ReferralChaincode) Init(stub *shim.ChaincodeStub, function string, args
 	return nil, nil
 }
 
-// Invoke isur entry point to invoke a chaincode function
+// Invoke is our entry point to invoke a chaincode function
 func (t *ReferralChaincode) Invoke(stub *shim.ChaincodeStub, function string, args []string) ([]byte, error) {
 	fmt.Println("invoke is running " + function)
 
 	// Handle different functions
 	if function == "init" {
 		return t.Init(stub, "init", args)
-	} else if function == "write" {
-		return t.write(stub, args)
+	} else if function == "createReferral" {
+		return t.createReferral(stub, args)
+	} else if function == "updateReferral" {
+		return t.updateReferral(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -65,11 +67,30 @@ func (t *ReferralChaincode) Query(stub *shim.ChaincodeStub, function string, arg
 	return nil, errors.New("Received unknown function query")
 }
 
-// write - invoke function to write key/value pair
-func (t *ReferralChaincode) write(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+// updateReferral - invoke function to updateReferral key/value pair
+func (t *ReferralChaincode) updateReferral(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var key, value string
 	var err error
-	fmt.Println("running write()")
+	fmt.Println("running updateReferral()")
+
+	if len(args) != 2 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
+	}
+
+	key = args[0] //rename for funsies
+	value = args[1]
+	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+// createReferral - invoke function to write key/value pair
+func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+	var key, value string
+	var err error
+	fmt.Println("running createReferral()")
 
 	if len(args) != 2 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
