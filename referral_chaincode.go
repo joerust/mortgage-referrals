@@ -264,26 +264,26 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 	value = args[1]
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
-		return nil, err
+		return []byte("Count not put the key: " + key + " and value: " + value + " on the ledger"), err
 	}
 	
 	// Deserialize the input string into a GO data structure to hold the referral
 	err, referral = unmarshallBytes([]byte(value))
 	if err != nil {
-		return nil, err
+		return []byte("Count not unmarshall the bytes from the value: " + value + " on the ledger"), err
 	}
 	
 	// Create a ledger record that indexes the referral id by the created status
 	err = indexByStatus(referral.referralId, referral.status, stub)
 	if err != nil {
-		return nil, err
+		return []byte("Count not index the bytes by status from the value: " + value + " on the ledger"), err
 	}
 	
 	// Create a ledger record that indexes the referral id by the created department
 	for i := range referral.departments {
 		err = indexByDepartment(referral.referralId, referral.departments[i], stub)
 		if err != nil {
-			return nil, err
+			return []byte("Count not index the bytes by department from the value: " + value + " on the ledger"), err
 		}
 	}
 	
