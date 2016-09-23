@@ -81,10 +81,131 @@ func (t *ReferralChaincode) Query(stub *shim.ChaincodeStub, function string, arg
 	// Handle different functions
 	if function == "read" { //read a variable
 		return t.read(stub, args)
+	} else if function == "searchByStatus" {
+		return t.searchByStatus(args[0], stub)
+	} else if function == "searchByDepartment" {
+		return t.searchByDepartment(args[0], stub)
 	}
 	fmt.Println("query did not find func: " + function)
 
 	return nil, errors.New("Received unknown function query")
+}
+
+// Adds the referral id to a ledger list item for the given department allowing for quick search of referrals in a given department
+func (t *ReferralChaincode) indexByDepartment(referralId string, department string, stub *shim.ChaincodeStub) (error) {
+	valAsbytes, err := stub.GetState(department)
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + department + "\"}"
+		return errors.New(jsonResp)
+	}
+	
+	if valAsbytes == nil {
+		err = stub.PutState(department, []byte(referralId))
+	} else {
+	    commaDelimitedStatuses := BytesToString(valAsbytes)
+		err = stub.PutState(department, []byte(commaDelimitedStatuses + "," + referralId))
+	}
+	
+	return err
+}
+
+func (t *ReferralChaincode) removeStatusReferralIndex(referralId string, status string, stub *shim.ChaincodeStub) (error) {
+	valAsbytes, err := stub.GetState(status)
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + status + "\"}"
+		return errors.New(jsonResp)
+	}
+	
+	if valAsbytes == nil {
+		return nil;
+	} else {
+		// Remove the referral from this status type, if it exists
+		commaDelimitedStatuses := BytesToString(valAsbytes)
+		referralIdsInCurrentStatus := strings.Split(commaDelimitedStatuses, ",")
+		updatedReferralIdList := ""
+		
+		appendComma := false
+		for i := range referralIdsInCurrentStatus {
+			if referralIdsInCurrentStatus[i] != referralId {
+			    if appendComma == false {
+					updatedReferralIdList += referralIdsInCurrentStatus[i]
+					appendComma = true
+				} else {
+					updatedReferralIdList = updatedReferralIdList + "," + referralIdsInCurrentStatus[i]
+				}
+			}
+		}
+		
+		err = stub.PutState(status, []byte(updatedReferralIdList))
+	}
+	
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to update state for " + status + "\"}"
+		return errors.New(jsonResp)
+	}
+	
+	return nil
+}
+
+// Adds the referral id to a ledger list item for the given department allowing for quick search of referrals in a given department
+func (t *ReferralChaincode) indexByStatus(referralId string, status string, stub *shim.ChaincodeStub) (error) {
+	valAsbytes, err := stub.GetState(status)
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + status + "\"}"
+		return errors.New(jsonResp)
+	}
+	
+	if valAsbytes == nil {
+		err = stub.PutState(status, []byte(referralId))
+	} else {
+	    commaDelimitedStatuses := BytesToString(valAsbytes)
+		err = stub.PutState(status, []byte(commaDelimitedStatuses + "," + referralId))
+	}
+	
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to update state for " + status + "\"}"
+		return errors.New(jsonResp)
+	}
+	
+	return nil
+}
+
+func (t *ReferralChaincode) unmarshallBytes(valAsBytes []byte) (error, CustomerReferral) {
+	var err error
+	var referral CustomerReferral
+	fmt.Println("Unmarshalling JSON")
+	err = json.Unmarshal(valAsBytes, &referral)
+	
+	if err != nil {
+		fmt.Println("Unmarshalling JSON failed")
+	}
+	
+	return err, referral
+}
+
+func (t *ReferralChaincode) marshallReferral(referral CustomerReferral) (error, []byte) {
+	fmt.Println("Marshalling JSON to bytes")
+	valAsbytes, err := json.Marshal(referral)
+	
+	if err != nil {
+		fmt.Println("Marshalling JSON to bytes failed")
+		return err, nil
+	}
+	
+	return nil, valAsbytes
+}
+
+func (t *ReferralChaincode) updateStatus(referral CustomerReferral, status string, stub *shim.ChaincodeStub) (error) {
+	fmt.Println("Setting status")
+	
+	err := t.removeStatusReferralIndex(referral.referralId, referral.status, stub)
+	if err != nil {
+		return err
+	}
+	referral.status = status
+	err = t.indexByStatus(referral.referralId, status, stub)
+	
+	return err
 }
 
 // updateReferral - invoke function to updateReferral key/value pair
@@ -124,6 +245,64 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 	}
 	return nil, nil
 }
+
+func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals string, stub *shim.ChaincodeStub) ([]byte, error) {
+	commaDelimitedReferrals := strings.Split(delimitedReferrals, ",")
+
+	referralResultSet := ""
+	appendComma := false
+	
+	for i := range commaDelimitedReferrals {
+		valAsbytes, err := stub.GetState(commaDelimitedReferrals[i])
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		if appendComma == false {
+			referralResultSet += BytesToString(valAsbytes)	
+		} else {
+			referralResultSet = referralResultSet + "," + BytesToString(valAsbytes)
+		}
+	}
+		
+	return []byte(referralResultSet), nil
+}
+
+func (t *ReferralChaincode) searchByDepartment(department string, stub *shim.ChaincodeStub) ([]byte, error) {
+	valAsbytes, err := stub.GetState(department)
+	
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + department + "\"}"
+		return nil, errors.New(jsonResp)
+	}
+	
+	valAsbytes, err = t.processCommaDelimitedReferrals(BytesToString(valAsbytes), stub)
+	
+	if(err != nil) {
+		return nil, err
+	}
+	
+	return valAsbytes, nil
+}
+
+func (t *ReferralChaincode) searchByStatus(status string, stub *shim.ChaincodeStub) ([]byte, error) {
+	valAsbytes, err := stub.GetState(status)
+	
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get state for " + status + "\"}"
+		return nil, errors.New(jsonResp)
+	}
+	
+	valAsbytes, err = t.processCommaDelimitedReferrals(BytesToString(valAsbytes), stub)
+	
+	if(err != nil) {
+		return nil, err
+	}
+	
+	return valAsbytes, nil
+}
+
 
 // read - query function to read key/value pair
 func (t *ReferralChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
