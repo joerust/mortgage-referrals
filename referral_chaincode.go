@@ -229,8 +229,10 @@ func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args 
 
 // createReferral - invoke function to write key/value pair
 func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+
 	var key, value string
 	var err error
+	var referral CustomerReferral
 	fmt.Println("running createReferral()")
 
 	if len(args) != 2 {
@@ -239,11 +241,33 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 
 	key = args[0] //rename for funsies
 	value = args[1]
+	
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
-		return nil, err
+		return []byte("Could not put the key: " + key + " and value: " + value + " on the ledger"), err
 	}
-	return nil, nil
+	
+	// Deserialize the input string into a GO data structure to hold the referral
+	err, referral = t.unmarshallBytes([]byte(value))
+	if err != nil {
+		return []byte("Count not unmarshall the bytes from the value: " + value + " on the ledger"), err
+	}
+	
+	// Create a ledger record that indexes the referral id by the created status
+	err = t.indexByStatus(referral.referralId, referral.status, stub)
+	if err != nil {
+		return []byte("Count not index the bytes by status from the value: " + value + " on the ledger"), err
+	}
+	
+	// Create a ledger record that indexes the referral id by the created department
+	for i := range referral.departments {
+		err = t.indexByDepartment(referral.referralId, referral.departments[i], stub)
+		if err != nil {
+			return []byte("Count not index the bytes by department from the value: " + value + " on the ledger"), err
+		}
+	}
+	
+	return nil, err
 }
 
 func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals string, stub *shim.ChaincodeStub) ([]byte, error) {
