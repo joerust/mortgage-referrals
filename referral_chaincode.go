@@ -361,7 +361,7 @@ func (t *ReferralChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byt
 	
 	if err != nil {
 		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return nill, errors.New(jsonResp)
+		return nil, errors.New(jsonResp)
 	}
 	
 	return []byte("This is json"), nil
