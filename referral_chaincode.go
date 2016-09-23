@@ -171,11 +171,16 @@ func (t *ReferralChaincode) indexByStatus(referralId string, status string, stub
 }
 
 func (t *ReferralChaincode) unmarshallBytes(valAsBytes []byte) (error, CustomerReferral) {
-
+	var err error
 	var referral CustomerReferral
+	fmt.Println("Unmarshalling JSON")
+	err = json.Unmarshal(valAsBytes, &referral)
 	
+	if err != nil {
+		fmt.Println("Unmarshalling JSON failed")
+	}
 	
-	return nil, referral
+	return err, referral
 }
 
 func (t *ReferralChaincode) marshallReferral(referral CustomerReferral) (error, []byte) {
@@ -229,19 +234,33 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 	var err error
 	fmt.Println("running createReferral()")
 
-	if len(args) != 2 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
+	if len(args) != 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 4 or more. name of the key and value to set")
 	}
 
 	key = args[0] //rename for funsies
 	value = args[1]
+	status := args[2]
+	departments := strings.Split(args[3], ",")
+	
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
 		return nil, err
 	}
 	
 	// Deserialize the input string into a GO data structure to hold the referral
-	t.unmarshallBytes([]byte(value))
+	err = t.indexByStatus(key, status, stub)
+	if err != nil {
+		return []byte("Count not index the bytes by status from the value: " + value + " on the ledger"), err
+	}
+	
+	// Create a ledger record that indexes the referral id by the created department
+	for i := range departments {
+		err = t.indexByDepartment(key, departments[i], stub)
+		if err != nil {
+			return []byte("Count not index the bytes by department from the value: " + value + " on the ledger"), err
+		}
+	}
 	
 	
 	return nil, nil
