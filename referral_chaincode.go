@@ -16,9 +16,23 @@ package main
 import (
 	"errors"
 	"fmt"
-
+	"reflect"
+	"unsafe"
+	"strings"
+    "encoding/json"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
+
+type CustomerReferral struct {
+	referralId string
+    customerName string
+	contactNumber string
+	customerId string
+	employeeId string
+	departments []string
+    createDate int64
+	status string
+}
 
 // ReferralChaincode implementation stores and updates referral information on the blockchain
 type ReferralChaincode struct {
@@ -29,6 +43,12 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
 	}
+}
+
+func BytesToString(b []byte) string {
+    bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+    sh := reflect.StringHeader{bh.Data, bh.Len}
+    return *(*string)(unsafe.Pointer(&sh))
 }
 
 // Init resets all the things
@@ -46,8 +66,8 @@ func (t *ReferralChaincode) Invoke(stub *shim.ChaincodeStub, function string, ar
 		return t.Init(stub, "init", args)
 	} else if function == "createReferral" {
 		return t.createReferral(stub, args)
-	} else if function == "updateReferral" {
-		return t.updateReferral(stub, args)
+	} else if function == "updateReferralStatus" {
+		return t.updateReferralStatus(stub, args)
 	}
 	fmt.Println("invoke did not find func: " + function)
 
@@ -68,10 +88,10 @@ func (t *ReferralChaincode) Query(stub *shim.ChaincodeStub, function string, arg
 }
 
 // updateReferral - invoke function to updateReferral key/value pair
-func (t *ReferralChaincode) updateReferral(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var key, value string
 	var err error
-	fmt.Println("running updateReferral()")
+	fmt.Println("running updateReferralStatus()")
 
 	if len(args) != 2 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
