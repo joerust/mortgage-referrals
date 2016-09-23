@@ -351,8 +351,6 @@ func searchByStatus(status string, stub *shim.ChaincodeStub) ([]byte, error) {
 func (t *ReferralChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var key, jsonResp string
 	var err error
-
-	return []byte("This is json"), nil
 	
 	if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting name of the key to query")
@@ -361,6 +359,9 @@ func (t *ReferralChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byt
 	
 	key = args[0]
 	valAsbytes, err := stub.GetState(key)
+	
+	return []byte("This is json"), nil
+	
 	if err != nil {
 		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
 		return []byte(jsonResp), errors.New(jsonResp)
