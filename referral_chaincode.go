@@ -356,16 +356,15 @@ func (t *ReferralChaincode) read(stub *shim.ChaincodeStub, args []string) ([]byt
 		return nil, errors.New("Incorrect number of arguments. Expecting name of the key to query")
 	}
 
-	
 	key = args[0]
 	valAsbytes, err := stub.GetState(key)
 	
-	return []byte("This is json"), nil
-	
 	if err != nil {
 		jsonResp = "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return []byte(jsonResp), errors.New(jsonResp)
+		return nill, errors.New(jsonResp)
 	}
+	
+	return []byte("This is json"), nil
 
 	if valAsbytes == nil {
 		return []byte("Did not find entry for key: " + key), nil
