@@ -171,16 +171,11 @@ func (t *ReferralChaincode) indexByStatus(referralId string, status string, stub
 }
 
 func (t *ReferralChaincode) unmarshallBytes(valAsBytes []byte) (error, CustomerReferral) {
-	var err error
+
 	var referral CustomerReferral
-	fmt.Println("Unmarshalling JSON")
-	err = json.Unmarshal(valAsBytes, &referral)
 	
-	if err != nil {
-		fmt.Println("Unmarshalling JSON failed")
-	}
 	
-	return err, referral
+	return nil, referral
 }
 
 func (t *ReferralChaincode) marshallReferral(referral CustomerReferral) (error, []byte) {
