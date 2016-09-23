@@ -269,7 +269,7 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals string, stub *shim.ChaincodeStub) ([]byte, error) {
 	commaDelimitedReferrals := strings.Split(delimitedReferrals, ",")
 
-	referralResultSet := ""
+	referralResultSet := "["
 	appendComma := false
 	
 	for i := range commaDelimitedReferrals {
@@ -285,7 +285,8 @@ func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals st
 			referralResultSet = referralResultSet + "," + BytesToString(valAsbytes)
 		}
 	}
-		
+	
+	referralResultSet += "]"
 	return []byte(referralResultSet), nil
 }
 
