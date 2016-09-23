@@ -270,7 +270,6 @@ func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals st
 	commaDelimitedReferrals := strings.Split(delimitedReferrals, ",")
 
 	referralResultSet := "["
-	appendComma := false
 	
 	for i := range commaDelimitedReferrals {
 		valAsbytes, err := stub.GetState(commaDelimitedReferrals[i])
@@ -279,11 +278,7 @@ func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals st
 			return nil, err
 		}
 		
-		if appendComma == false {
-			referralResultSet += BytesToString(valAsbytes)	
-		} else {
-			referralResultSet = referralResultSet + "," + BytesToString(valAsbytes)
-		}
+		referralResultSet = referralResultSet + "," + BytesToString(valAsbytes)
 	}
 	
 	referralResultSet += "]"
