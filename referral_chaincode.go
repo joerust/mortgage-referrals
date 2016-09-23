@@ -232,7 +232,6 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 
 	var key, value string
 	var err error
-	var referral CustomerReferral
 	fmt.Println("running createReferral()")
 
 	if len(args) != 2 {
@@ -247,14 +246,8 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 	}
 	
 	// Deserialize the input string into a GO data structure to hold the referral
-	err, referral = t.unmarshallBytes([]byte(value))
-	if err != nil {
-		return []byte("Count not unmarshall the bytes from the value: " + value + " on the ledger"), err
-	}
+	t.unmarshallBytes([]byte(value))
 	
-	if referral.status != "bagooba" {
-		return nil, nil
-	}
 	
 	return nil, nil
 }
