@@ -65,6 +65,7 @@ func (t *ReferralChaincode) Invoke(stub *shim.ChaincodeStub, function string, ar
 	if function == "init" {
 		return t.Init(stub, "init", args)
 	} else if function == "createReferral" {
+		return []byte("Executing create referral"), nil
 		return t.createReferral(stub, args)
 	} else if function == "updateReferralStatus" {
 		return t.updateReferralStatus(stub, args)
@@ -251,7 +252,7 @@ func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args 
 
 // createReferral - invoke function to write key/value pair
 func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
-return []byte("Could not put the key: " + args[0] + " and value: " + args[1] + " on the ledger"), nil
+
 	var key, value string
 	var err error
 	var referral CustomerReferral
