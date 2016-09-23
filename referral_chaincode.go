@@ -251,6 +251,7 @@ func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args 
 
 // createReferral - invoke function to write key/value pair
 func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
+return []byte("Could not put the key: " + args[0] + " and value: " + args[1] + " on the ledger"), nil
 	var key, value string
 	var err error
 	var referral CustomerReferral
@@ -262,7 +263,7 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 
 	key = args[0] //rename for funsies
 	value = args[1]
-	return []byte("Could not put the key: " + key + " and value: " + value + " on the ledger"), err
+	
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
 		return []byte("Could not put the key: " + key + " and value: " + value + " on the ledger"), err
