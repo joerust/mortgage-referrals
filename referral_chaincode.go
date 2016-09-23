@@ -62,14 +62,17 @@ func (t *ReferralChaincode) Invoke(stub *shim.ChaincodeStub, function string, ar
 	fmt.Println("invoke is running " + function)
 
 	// Handle different functions
+	return []byte("Function: " + function + "being invoked"), nil
 	if function == "init" {
 		return t.Init(stub, "init", args)
 	} else if function == "createReferral" {
-		return []byte("Executing create referral"), nil
+		
 		return t.createReferral(stub, args)
 	} else if function == "updateReferralStatus" {
 		return t.updateReferralStatus(stub, args)
 	}
+	
+	return []byte("Function: " + function + "not found"), nil
 	fmt.Println("invoke did not find func: " + function)
 
 	return nil, errors.New("Received unknown function invocation")
