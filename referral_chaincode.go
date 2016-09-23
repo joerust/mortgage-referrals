@@ -262,9 +262,10 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 
 	key = args[0] //rename for funsies
 	value = args[1]
+	return []byte("Could not put the key: " + key + " and value: " + value + " on the ledger"), err
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
-		return []byte("Count not put the key: " + key + " and value: " + value + " on the ledger"), err
+		return []byte("Could not put the key: " + key + " and value: " + value + " on the ledger"), err
 	}
 	
 	// Deserialize the input string into a GO data structure to hold the referral
