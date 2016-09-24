@@ -212,18 +212,30 @@ func (t *ReferralChaincode) updateStatus(referral CustomerReferral, status strin
 func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var key, value string
 	var err error
-	fmt.Println("running updateReferralStatus()")
+	fmt.Println("running updateReferral()")
 
-	if len(args) != 2 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
+	if len(args) != 4 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 4 or more. name of the key and value to set")
 	}
 
 	key = args[0] //rename for funsies
 	value = args[1]
+	oldStatus := args[2]
+	status := args[3]
+	
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
 		return nil, err
 	}
+	
+	// Deserialize the input string into a GO data structure to hold the referral
+	err = t.indexByStatus(key, status, stub)
+	if err != nil {
+		return []byte("Count not index the bytes by status from the value: " + value + " on the ledger"), err
+	}
+	
+	err = t.removeStatusReferralIndex(key, oldStatus, stub)
+	
 	return nil, nil
 }
 
@@ -278,7 +290,11 @@ func (t *ReferralChaincode) processCommaDelimitedReferrals(delimitedReferrals st
 			return nil, err
 		}
 		
-		referralResultSet = referralResultSet + "," + BytesToString(valAsbytes)
+		if i == 0 {
+			referralResultSet = referralResultSet + BytesToString(valAsbytes)
+		} else {
+			referralResultSet = referralResultSet + "," + BytesToString(valAsbytes)
+		}
 	}
 	
 	referralResultSet += "]"
