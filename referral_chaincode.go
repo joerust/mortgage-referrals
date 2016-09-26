@@ -24,14 +24,23 @@ import (
 )
 
 type CustomerReferral struct {
-	referralId string
-    customerName string
-	contactNumber string
-	customerId string
-	employeeId string
-	departments []string
-    createDate int64
-	status string
+	ReferralId string `json:"referralId"`
+    CustomerName string `json:"customerName"`
+	ContactNumber string `json:"contactNumber"`
+	CustomerId string `json:"customerId"`
+	EmployeeId string `json:"employeeId"`
+	Departments []string `json:"departments"`
+    CreateDate int64 `json:"createDate"`
+	Status string `json:"status"`
+	Mortgage Mortgage `json:"mortgage"`
+}
+
+type Mortgage struct {
+	MortgageNumber string `json:"mortgageNumber"`
+    MortgageType string `json:"mortgageType"`
+	ReferralId string `json:"referralId"`
+	Rate string `json:"rate"`
+	Amount string `json:"amount"`
 }
 
 // ReferralChaincode implementation stores and updates referral information on the blockchain
@@ -42,7 +51,7 @@ func main() {
 	err := shim.Start(new(ReferralChaincode))
 	if err != nil {
 		fmt.Printf("Error starting Simple chaincode: %s", err)
-	}
+	}	
 }
 
 func BytesToString(b []byte) string {
@@ -170,14 +179,15 @@ func (t *ReferralChaincode) indexByStatus(referralId string, status string, stub
 	return nil
 }
 
-func (t *ReferralChaincode) unmarshallBytes(valAsBytes []byte) (error, CustomerReferral) {
+func unmarshallBytes(valAsBytes []byte) (error, CustomerReferral) {
 	var err error
 	var referral CustomerReferral
-	fmt.Println("Unmarshalling JSON")
+
 	err = json.Unmarshal(valAsBytes, &referral)
-	
+
+	fmt.Println("JSON Unmarshalled")	
 	if err != nil {
-		fmt.Println("Unmarshalling JSON failed")
+		fmt.Println(err.Error())
 	}
 	
 	return err, referral
@@ -198,12 +208,12 @@ func (t *ReferralChaincode) marshallReferral(referral CustomerReferral) (error, 
 func (t *ReferralChaincode) updateStatus(referral CustomerReferral, status string, stub *shim.ChaincodeStub) (error) {
 	fmt.Println("Setting status")
 	
-	err := t.removeStatusReferralIndex(referral.referralId, referral.status, stub)
+	err := t.removeStatusReferralIndex(referral.ReferralId, referral.Status, stub)
 	if err != nil {
 		return err
 	}
-	referral.status = status
-	err = t.indexByStatus(referral.referralId, status, stub)
+	referral.Status = status
+	err = t.indexByStatus(referral.ReferralId, status, stub)
 	
 	return err
 }
@@ -212,28 +222,48 @@ func (t *ReferralChaincode) updateStatus(referral CustomerReferral, status strin
 func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var key, value string
 	var err error
+	var referral CustomerReferral
+	var valAsbytes []byte
+	
 	fmt.Println("running updateReferral()")
 
 	if len(args) != 4 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 4 or more. name of the key and value to set")
 	}
 
-	key = args[0] //rename for funsies
-	value = args[1]
-	oldStatus := args[2]
-	status := args[3]
+	key = args[0] // The referral id
+	value = args[1] // The new status
 	
-	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
+	// Look up the json blob that matches the current referral id
+	valAsbytes, err = stub.GetState(key)
+	
+	// Unmarshall said json blob into a referral object
+	err = json.Unmarshal(valAsbytes, &referral)
+	
+	// Save the current status so that it can be unindexed once we update the referral object
+	oldStatus := referral.Status;
+	
+	// Set the referral status to the new value
+	referral.Status = value;
+	
+	// Serialize the object to a JSON string to be stored in the ledger
+	valAsbytes, err = json.Marshal(referral)
+	
+	// Store the json string in the ledger
+	err = stub.PutState(key, valAsbytes) //write the variable into the chaincode state
+	
 	if err != nil {
 		return nil, err
 	}
 	
-	// Deserialize the input string into a GO data structure to hold the referral
-	err = t.indexByStatus(key, status, stub)
+	// Index things by the new status
+	err = t.indexByStatus(key, referral.Status, stub)
+	
 	if err != nil {
 		return []byte("Count not index the bytes by status from the value: " + value + " on the ledger"), err
 	}
 	
+	// Remove the indexing by the status before the update
 	err = t.removeStatusReferralIndex(key, oldStatus, stub)
 	
 	return nil, nil
@@ -246,29 +276,33 @@ func (t *ReferralChaincode) createReferral(stub *shim.ChaincodeStub, args []stri
 	var err error
 	fmt.Println("running createReferral()")
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 or more. name of the key and value to set")
+	if len(args) != 2 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 2 parameters, name of the key and value to set")
 	}
 
 	key = args[0] //rename for funsies
 	value = args[1]
-	status := args[2]
-	departments := strings.Split(args[3], ",")
 	
 	err = stub.PutState(key, []byte(value)) //write the variable into the chaincode state
 	if err != nil {
 		return nil, err
 	}
 	
+	var referral CustomerReferral
+
+	err = json.Unmarshal([] byte(value), &referral)
+
+	
 	// Deserialize the input string into a GO data structure to hold the referral
-	err = t.indexByStatus(key, status, stub)
+	err = t.indexByStatus(key, referral.Status, stub)
+	
 	if err != nil {
 		return []byte("Count not index the bytes by status from the value: " + value + " on the ledger"), err
 	}
 	
 	// Create a ledger record that indexes the referral id by the created department
-	for i := range departments {
-		err = t.indexByDepartment(key, departments[i], stub)
+	for i := range referral.Departments {
+		err = t.indexByDepartment(key, referral.Departments[i], stub)
 		if err != nil {
 			return []byte("Count not index the bytes by department from the value: " + value + " on the ledger"), err
 		}
