@@ -227,8 +227,8 @@ func (t *ReferralChaincode) updateReferralStatus(stub *shim.ChaincodeStub, args 
 	
 	fmt.Println("running updateReferral()")
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4 or more. name of the key and value to set")
+	if len(args) != 2 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 2. name of the key and value to set")
 	}
 
 	key = args[0] // The referral id
